@@ -19,7 +19,8 @@ output_folder_path = config['output_folder_path']
 #############Function for data ingestion
 def merge_multiple_dataframe():
     #check for datasets, compile them together, and write to an output file
-
+    print(input_folder_path)
+    print(output_folder_path)
 
 
 if __name__ == '__main__':
