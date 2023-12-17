@@ -35,7 +35,7 @@ def score_model():
 
     #it should write the result to the latestscore.txt file
     with open(os.path.join(config['output_model_path'], 'latestscore.txt'), 'w') as md_file:
-        md_file.write(f'F1 Score = {f1}')
+        md_file.write(str(f1))
     return f1
 
 if __name__ == '__main__':
