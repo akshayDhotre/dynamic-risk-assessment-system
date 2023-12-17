@@ -2,9 +2,9 @@ from flask import Flask, session, jsonify, request
 import pandas as pd
 import numpy as np
 import pickle
-import create_prediction_model
-import diagnosis 
-import predict_exited_from_saved_model
+# import create_prediction_model
+import diagnostics, scoring, ingestion 
+# import predict_exited_from_saved_model
 import json
 import os
 
@@ -22,29 +22,61 @@ dataset_csv_path = os.path.join(config['output_folder_path'])
 prediction_model = None
 
 
+@app.route('/')
+def greetings():
+    return "Welcome to Dynamic Risk Assessment System!"
+
 #######################Prediction Endpoint
 @app.route("/prediction", methods=['POST','OPTIONS'])
 def predict():        
-    #call the prediction function you created in Step 3
-    return #add return value for prediction outputs
+    file_path = request.get_json()['filepath']
+
+    df = pd.read_csv(file_path)
+
+    preds = diagnostics.model_predictions(df)
+    return preds
 
 #######################Scoring Endpoint
 @app.route("/scoring", methods=['GET','OPTIONS'])
-def stats():        
+def get_score():        
     #check the score of the deployed model
-    return #add return value (a single F1 score number)
+    return {'F1 Score': scoring.score_model()}
 
 #######################Summary Statistics Endpoint
 @app.route("/summarystats", methods=['GET','OPTIONS'])
-def stats():        
+def get_stats():        
     #check means, medians, and modes for each column
-    return #return a list of all calculated summary statistics
+    return jsonify(diagnostics.dataframe_summary())
 
 #######################Diagnostics Endpoint
 @app.route("/diagnostics", methods=['GET','OPTIONS'])
-def stats():        
+def get_diagnostics():        
     #check timing and percent NA values
-    return #add return value for all diagnostics
+    missing_data = diagnostics.missing_data()
+    execution_timings = diagnostics.execution_time()
+    dependency_check = diagnostics.outdated_packages_list()
+
+    # diagnostics_data = {
+    #     'missing_percentage':missing_data, 
+    #     'execution_time': execution_timings,
+    #     'outdated_packages': dependency_check
+    # }
+
+    diagnostics_data = {'execution time': {step:duration 
+                for step, duration in zip(['ingestion step','training step'],
+                                            execution_timings)}, 
+            'missing data': {col:pct 
+                for col, pct in zip(['lastmonth_activity',
+                                    'lastyear_activity',
+                                    'number_of_employees',
+                                    'exited'], missing_data)},
+            'dependency check':[{'Module':row[0], 
+                                'Version':row[1][0], 
+                                'Vlatest':row[1][1]} 
+                                for row in dependency_check.iterrows()]
+            }
+    
+    return jsonify(diagnostics_data)
 
 if __name__ == "__main__":    
-    app.run(host='0.0.0.0', port=8000, debug=True, threaded=True)
+    app.run(host='127.0.0.1', port=8000, debug=True, threaded=True)
